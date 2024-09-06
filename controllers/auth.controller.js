@@ -26,7 +26,7 @@ export const register = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       status: "failed",
-      message: err.message,
+      message: "Failed to create user!",
     });
   }
 };
@@ -64,18 +64,25 @@ export const login = async (req, res) => {
       expiresIn: maxAge,
     });
 
+    const { password: userPassword, ...userInfo } = user;
+
     res
       .cookie("JWT_TOKEN", token, {
         httpOnly: true,
         maxAge,
       })
       .status(200)
-      .json({ status: "success", data: {} });
+      .json({ status: "success", data: userInfo });
   } catch (err) {
     res.status(500).json({
       status: "failed",
-      message: err.message,
+      message: "Failed to login! Try again",
     });
   }
 };
-export const logout = (req, res) => {};
+export const logout = (req, res) => {
+  res.clearCookie("JWT_TOKEN").status(200).json({
+    status: "success",
+    data: {},
+  });
+};
