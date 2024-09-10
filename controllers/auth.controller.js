@@ -66,13 +66,7 @@ export const login = async (req, res) => {
 
     const { password: userPassword, ...userInfo } = user;
 
-    res
-      .cookie("JWT_TOKEN", token, {
-        httpOnly: true,
-        maxAge,
-      })
-      .status(200)
-      .json({ status: "success", data: userInfo });
+    res.status(200).json({ status: "success", data: userInfo, token });
   } catch (err) {
     res.status(500).json({
       status: "failed",
