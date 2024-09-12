@@ -78,5 +78,5 @@ model SavedPost {
   postId   String   @unique @db.ObjectId
   CreateAt DateTime @default(now())
 
-  @@unique([postId, userId])
+  @@unique([userId, postId])
 }

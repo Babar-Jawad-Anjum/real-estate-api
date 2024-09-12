@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import jwt from "jsonwebtoken";
 
 export const getPosts = async (req, res) => {
   const query = req.query;
@@ -39,14 +40,50 @@ export const getPost = async (req, res) => {
       where: { id },
       include: {
         postDetail: true,
-        user: true,
+        user: {
+          select: {
+            username: true,
+            avatar: true,
+          },
+        },
       },
     });
+
+    // Function to verify JWT token
+    const verifyToken = (token) => {
+      return new Promise((resolve, reject) => {
+        jwt.verify(token, process.env.JWT_SECRET, (err, payload) => {
+          if (err) return reject(err);
+          resolve(payload);
+        });
+      });
+    };
+
+    let isSaved = false;
+
+    const testToken = req.headers.authorization;
+    if (testToken && testToken.startsWith("Bearer")) {
+      const jwtToken = testToken.split(" ")[1];
+      try {
+        const payload = await verifyToken(jwtToken);
+        const savedPost = await prisma.savedPost.findUnique({
+          where: {
+            userId_postId: {
+              postId: id,
+              userId: payload.id,
+            },
+          },
+        });
+        isSaved = !!savedPost;
+      } catch (err) {
+        console.log("JWT verification failed:", err);
+      }
+    }
 
     res.status(200).json({
       status: "success",
       data: {
-        post,
+        post: { ...post, isSaved },
       },
     });
   } catch (err) {
@@ -57,6 +94,7 @@ export const getPost = async (req, res) => {
     });
   }
 };
+
 export const addPost = async (req, res) => {
   const body = req.body;
   const tokenUserId = req.userId;
