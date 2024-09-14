@@ -182,3 +182,29 @@ export const profilePosts = async (req, res) => {
     });
   }
 };
+export const notificationsCount = async (req, res) => {
+  const tokenUserId = req.userId;
+  try {
+    const notificationsCount = await prisma.chat.count({
+      where: {
+        userIDs: {
+          hasSome: [tokenUserId],
+        },
+        NOT: {
+          seenBy: { hasSome: [tokenUserId] },
+        },
+      },
+    });
+    res.status(200).json({
+      status: "success",
+      data: {
+        notificationsCount,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "failed",
+      message: "Failed to fetch notifications count",
+    });
+  }
+};
