@@ -148,9 +148,10 @@ export const savedPost = async (req, res) => {
       });
     }
   } catch (err) {
+    console.log(err);
     res.status(500).json({
       status: "failed",
-      message: "Failed to delete user",
+      message: "Failed to save post",
     });
   }
 };
