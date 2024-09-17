@@ -5,6 +5,7 @@ export const getPosts = async (req, res) => {
   const query = req.query;
 
   try {
+    // Fetch posts based on query parameters
     const posts = await prisma.post.findMany({
       where: {
         city: query.city || undefined,
@@ -16,12 +17,63 @@ export const getPosts = async (req, res) => {
           lte: parseInt(query.maxPrice) || 10000000,
         },
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
     });
+
+    // Function to verify JWT token
+    const verifyToken = (token) => {
+      return new Promise((resolve, reject) => {
+        jwt.verify(token, process.env.JWT_SECRET, (err, payload) => {
+          if (err) return reject(err);
+          resolve(payload);
+        });
+      });
+    };
+
+    let savedPosts = {};
+
+    const testToken = req.headers.authorization;
+    if (testToken && testToken.startsWith("Bearer")) {
+      const jwtToken = testToken.split(" ")[1];
+      try {
+        const payload = await verifyToken(jwtToken);
+        // Fetch saved posts for the user
+        const userSavedPosts = await prisma.savedPost.findMany({
+          where: {
+            userId: payload.id,
+            postId: {
+              in: posts.map((post) => post.id),
+            },
+          },
+        });
+        // Create a set of saved post IDs for quick lookup
+        const savedPostIds = new Set(
+          userSavedPosts.map((savedPost) => savedPost.postId)
+        );
+        savedPosts = posts.map((post) => ({
+          ...post,
+          isSaved: savedPostIds.has(post.id),
+        }));
+      } catch (err) {
+        console.log("JWT verification failed:", err);
+      }
+    } else {
+      // If no JWT token, return posts without the `isSaved` flag
+      savedPosts = posts;
+    }
 
     res.status(200).json({
       status: "success",
       data: {
-        posts,
+        posts: savedPosts,
       },
     });
   } catch (err) {
@@ -32,6 +84,7 @@ export const getPosts = async (req, res) => {
     });
   }
 };
+
 export const getPost = async (req, res) => {
   const id = req.params.id;
 
@@ -42,6 +95,7 @@ export const getPost = async (req, res) => {
         postDetail: true,
         user: {
           select: {
+            id: true,
             username: true,
             avatar: true,
           },

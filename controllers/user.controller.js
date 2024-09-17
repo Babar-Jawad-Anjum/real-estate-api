@@ -158,31 +158,73 @@ export const savedPost = async (req, res) => {
 
 export const profilePosts = async (req, res) => {
   const tokenUserId = req.userId;
+
   try {
+    // Fetch the user's posts
     const userPosts = await prisma.post.findMany({
       where: { userId: tokenUserId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
     });
+
+    // Fetch saved posts separately
     const savedPosts = await prisma.savedPost.findMany({
       where: { userId: tokenUserId },
-      include: { post: true },
+      include: {
+        post: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
     });
 
-    const savedPosts1 = savedPosts.map((item) => item.post);
+    // Add isSaved flag to userPosts if the post is saved by the user
+    const savedPostIds = new Set(
+      savedPosts.map((savedPost) => savedPost.postId)
+    );
 
+    const userPostsWithIsSaved = userPosts.map((post) => ({
+      ...post,
+      isSaved: savedPostIds.has(post.id), // Mark as saved if found in savedPostIds
+    }));
+
+    // Format saved posts to include the isSaved flag
+    const savedPostsWithFlag = savedPosts.map((savedPost) => ({
+      ...savedPost.post,
+      isSaved: true, // Add isSaved flag for saved posts
+    }));
+
+    // Return both userPosts with the isSaved flag and savedPosts separately
     res.status(200).json({
       status: "success",
       data: {
-        userPosts,
-        savedPosts: savedPosts1,
+        userPosts: userPostsWithIsSaved,
+        savedPosts: savedPostsWithFlag,
       },
     });
   } catch (err) {
+    console.log(err);
     res.status(500).json({
       status: "failed",
       message: "Failed to fetch profile posts",
     });
   }
 };
+
 export const notificationsCount = async (req, res) => {
   const tokenUserId = req.userId;
   try {

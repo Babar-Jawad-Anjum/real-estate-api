@@ -86,11 +86,30 @@ export const getChat = async (req, res) => {
 };
 export const addChat = async (req, res) => {
   const tokenUserId = req.userId;
+  const { receiverId } = req.body;
 
   try {
+    // Check if a chat already exists between the current user and the receiver
+    const existingChat = await prisma.chat.findFirst({
+      where: {
+        userIDs: {
+          hasEvery: [tokenUserId, receiverId],
+        },
+      },
+    });
+
+    if (existingChat) {
+      // If a chat already exists, return it
+      return res.status(400).json({
+        status: "failure",
+        message: "Chat already exist!",
+      });
+    }
+
+    // Create a new chat if no existing chat is found
     const newChat = await prisma.chat.create({
       data: {
-        userIDs: [tokenUserId, req.body.receiverId],
+        userIDs: [tokenUserId, receiverId],
       },
     });
 
@@ -107,6 +126,7 @@ export const addChat = async (req, res) => {
     });
   }
 };
+
 export const readChat = async (req, res) => {
   const tokenUserId = req.userId;
   try {
