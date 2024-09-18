@@ -18,7 +18,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
-    origin: "http://127.0.0.1:5173",
+    // origin: "http://127.0.0.1:5173",
+    origin: "https://real-estate-api-d8bc.onrender.com",
   },
 });
 
